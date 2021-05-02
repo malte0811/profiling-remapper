@@ -141,7 +141,7 @@ public class HprofParser {
         }
 
         // otherwise propagate the EOFException
-        int time = rereadInt(in, out);
+        rereadInt(in, out); // Time
         final int bytesLeftRaw = in.readInt();
         if (tag == 0x1c && !isFirst) {
             System.out.println("USing new HD size: " + newHeapdumpSize + " instead of " + bytesLeftRaw);
@@ -152,108 +152,122 @@ public class HprofParser {
         long bytesTotal = Integer.toUnsignedLong(bytesLeftRaw);
         long bytesLeft = bytesTotal;
 
-        long l1, l2, l3, l4;
-        int i1, i2, i3, i4, i5, i6, i7, i8, i9;
-        short s1;
-        byte b1;
-        float f1;
-        byte[] bArr1;
-        long[] lArr1;
-
         switch (tag) {
             case 0x1 -> {
                 // String in UTF-8
-                l1 = rereadId(idSize, in, out);
+                long stringId = rereadId(idSize, in, out);
                 bytesLeft -= idSize;
-                bArr1 = new byte[(int) bytesLeft];
-                rereadFully(in, out, bArr1);
-                handler.stringInUTF8(l1, new String(bArr1));
-                strings.put(l1, new String(bArr1));
+                byte[] stringBytes = new byte[(int) bytesLeft];
+                rereadFully(in, out, stringBytes);
+                handler.stringInUTF8(stringId, new String(stringBytes));
+                strings.put(stringId, new String(stringBytes));
             }
             case 0x2 -> {
                 // Load class
-                i1 = rereadInt(in, out);
-                l1 = rereadId(idSize, in, out);
-                i2 = rereadInt(in, out);
-                l2 = rereadId(idSize, in, out);
-                handler.loadClass(i1, l1, i2, l2);
-                if (toRemove < 0 && "java/util/HashMap$Node".equals(strings.get(l2))) {
-                    toRemove = l1;
+                int serialNum = rereadInt(in, out);
+                long classObjId = rereadId(idSize, in, out);
+                int stackSerialNum = rereadInt(in, out);
+                long nameStringId = rereadId(idSize, in, out);
+                handler.loadClass(serialNum, classObjId, stackSerialNum, nameStringId);
+                if (toRemove < 0 && "java/util/HashMap$Node".equals(strings.get(nameStringId))) {
+                    toRemove = classObjId;
                     System.out.println("Found target class: " + toRemove);
                 }
             }
             case 0x3 -> {
                 // Unload class
-                i1 = rereadInt(in, out);
-                handler.unloadClass(i1);
+                int serialNum = rereadInt(in, out);
+                handler.unloadClass(serialNum);
             }
             case 0x4 -> {
                 // Stack frame
-                l1 = rereadId(idSize, in, out);
-                l2 = rereadId(idSize, in, out);
-                l3 = rereadId(idSize, in, out);
-                l4 = rereadId(idSize, in, out);
-                i1 = rereadInt(in, out);
-                i2 = rereadInt(in, out);
-                handler.stackFrame(l1, l2, l3, l4, i1, i2);
+                long stackframeId = rereadId(idSize, in, out);
+                long methodNameId = rereadId(idSize, in, out);
+                long sigId = rereadId(idSize, in, out);
+                long sourceNameId = rereadId(idSize, in, out);
+                int serialNum = rereadInt(in, out);
+                int location = rereadInt(in, out);
+                handler.stackFrame(stackframeId, methodNameId, sigId, sourceNameId, serialNum, location);
             }
             case 0x5 -> {
                 // Stack trace
-                i1 = rereadInt(in, out);
-                i2 = rereadInt(in, out);
-                i3 = rereadInt(in, out);
+                int stackSerialNum = rereadInt(in, out);
+                int threadSerialNum = rereadInt(in, out);
+                int numFrames = rereadInt(in, out);
                 bytesLeft -= 12;
-                lArr1 = new long[(int) bytesLeft / idSize];
-                for (int i = 0; i < lArr1.length; i++) {
-                    lArr1[i] = rereadId(idSize, in, out);
+                long[] frameIds = new long[(int) bytesLeft / idSize];
+                for (int i = 0; i < frameIds.length; i++) {
+                    frameIds[i] = rereadId(idSize, in, out);
                 }
-                handler.stackTrace(i1, i2, i3, lArr1);
+                handler.stackTrace(stackSerialNum, threadSerialNum, numFrames, frameIds);
             }
             case 0x6 -> {
                 // Alloc sites
-                s1 = rereadShort(in, out);
-                f1 = rereadFloat(in, out);
-                i1 = rereadInt(in, out);
-                i2 = rereadInt(in, out);
-                l1 = rereadLong(in, out);
-                l2 = rereadLong(in, out);
-                i3 = rereadInt(in, out);    // num of sites that follow
-                AllocSite[] allocSites = new AllocSite[i3];
+                short flagMask = rereadShort(in, out);
+                float cutoffRatio = rereadFloat(in, out);
+                int totalLiveBytes = rereadInt(in, out);
+                int totLiveInstances = rereadInt(in, out);
+                long totalBytesAlloc = rereadLong(in, out);
+                long totalInstancesAlloc = rereadLong(in, out);
+                AllocSite[] allocSites = new AllocSite[rereadInt(in, out)];
                 for (int i = 0; i < allocSites.length; i++) {
-                    b1 = rereadByte(in, out);
-                    i4 = rereadInt(in, out);
-                    i5 = rereadInt(in, out);
-                    i6 = rereadInt(in, out);
-                    i7 = rereadInt(in, out);
-                    i8 = rereadInt(in, out);
-                    i9 = rereadInt(in, out);
+                    byte arrayIndicator = rereadByte(in, out);
+                    int classSerial = rereadInt(in, out);
+                    int stackSerial = rereadInt(in, out);
+                    int numLiveBytes = rereadInt(in, out);
+                    int numLiveInstances = rereadInt(in, out);
+                    int bytesAlloced = rereadInt(in, out);
+                    int instancesAlloced = rereadInt(in, out);
 
-                    allocSites[i] = new AllocSite(b1, i4, i5, i6, i7, i8, i9);
+                    allocSites[i] = new AllocSite(
+                            arrayIndicator,
+                            classSerial,
+                            stackSerial,
+                            numLiveBytes,
+                            numLiveInstances,
+                            bytesAlloced,
+                            instancesAlloced
+                    );
                 }
-                handler.allocSites(s1, f1, i1, i2, l1, l2, allocSites);
+                handler.allocSites(
+                        flagMask,
+                        cutoffRatio,
+                        totalLiveBytes,
+                        totLiveInstances,
+                        totalBytesAlloc,
+                        totalInstancesAlloc,
+                        allocSites
+                );
             }
             case 0x7 -> {
                 // Heap summary
-                i1 = rereadInt(in, out);
-                i2 = rereadInt(in, out);
-                l1 = rereadLong(in, out);
-                l2 = rereadLong(in, out);
-                handler.heapSummary(i1, i2, l1, l2);
+                int totalLiveBytes = rereadInt(in, out);
+                int totLiveInstances = rereadInt(in, out);
+                long totalBytesAlloc = rereadLong(in, out);
+                long totalInstancesAlloc = rereadLong(in, out);
+                handler.heapSummary(totalLiveBytes, totLiveInstances, totalBytesAlloc, totalInstancesAlloc);
             }
             case 0xa -> {
                 // Start thread
-                i1 = rereadInt(in, out);
-                l1 = rereadId(idSize, in, out);
-                i2 = rereadInt(in, out);
-                l2 = rereadId(idSize, in, out);
-                l3 = rereadId(idSize, in, out);
-                l4 = rereadId(idSize, in, out);
-                handler.startThread(i1, l1, i2, l2, l3, l4);
+                int threadSerialNum = rereadInt(in, out);
+                long threadObjectId = rereadId(idSize, in, out);
+                int stackSerialNum = rereadInt(in, out);
+                long threadNameId = rereadId(idSize, in, out);
+                long groupNameId = rereadId(idSize, in, out);
+                long parentGroupNameId = rereadId(idSize, in, out);
+                handler.startThread(
+                        threadSerialNum,
+                        threadObjectId,
+                        stackSerialNum,
+                        threadNameId,
+                        groupNameId,
+                        parentGroupNameId
+                );
             }
             case 0xb -> {
                 // End thread
-                i1 = rereadInt(in, out);
-                handler.endThread(i1);
+                int threadSerialNum = rereadInt(in, out);
+                handler.endThread(threadSerialNum);
             }
             case 0xc ->
                     // Heap dump
@@ -274,21 +288,20 @@ public class HprofParser {
                     handler.heapDumpEnd();
             case 0xd -> {
                 // CPU samples
-                i1 = rereadInt(in, out);
-                i2 = rereadInt(in, out);    // num samples that follow
-                CPUSample[] samples = new CPUSample[i2];
+                int totalNumSamples = rereadInt(in, out);
+                CPUSample[] samples = new CPUSample[rereadInt(in, out)];
                 for (int i = 0; i < samples.length; i++) {
-                    i3 = rereadInt(in, out);
-                    i4 = rereadInt(in, out);
-                    samples[i] = new CPUSample(i3, i4);
+                    int numSamples = rereadInt(in, out);
+                    int stackSerial = rereadInt(in, out);
+                    samples[i] = new CPUSample(numSamples, stackSerial);
                 }
-                handler.cpuSamples(i1, samples);
+                handler.cpuSamples(totalNumSamples, samples);
             }
             case 0xe -> {
                 // Control settings
-                i1 = rereadInt(in, out);
-                s1 = rereadShort(in, out);
-                handler.controlSettings(i1, s1);
+                int bitmaskFlags = rereadInt(in, out);
+                short stacktraceDepth = rereadShort(in, out);
+                handler.controlSettings(bitmaskFlags, stacktraceDepth);
             }
             default -> throw new HprofParserException("Unexpected top-level record type: " + tag);
         }
@@ -302,97 +315,90 @@ public class HprofParser {
         byte tag = rereadByte(in, out);
         int bytesRead = 1;
 
-        long l1, l2, l3, l4, l5, l6, l7;
-        int i1, i2;
-        short s1, s2, s3;
-        byte b1;
-        byte[] bArr1;
-        long[] lArr1;
-
         switch (tag) {
             case -1 -> {    // 0xFF
                 // Root unknown
-                l1 = rereadId(idSize, in, out);
-                handler.rootUnknown(l1);
+                long objId = rereadId(idSize, in, out);
+                handler.rootUnknown(objId);
                 bytesRead += idSize;
             }
             case 0x01 -> {
                 // Root JNI global
-                l1 = rereadId(idSize, in, out);
-                l2 = rereadId(idSize, in, out);
-                handler.rootJNIGlobal(l1, l2);
+                long objId = rereadId(idSize, in, out);
+                long jniGlobalRef = rereadId(idSize, in, out);
+                handler.rootJNIGlobal(objId, jniGlobalRef);
                 bytesRead += 2 * idSize;
             }
             case 0x02 -> {
                 // Root JNI local
-                l1 = rereadId(idSize, in, out);
-                i1 = rereadInt(in, out);
-                i2 = rereadInt(in, out);
-                handler.rootJNILocal(l1, i1, i2);
+                long objId = rereadId(idSize, in, out);
+                int threadSerial = rereadInt(in, out);
+                int frameNum = rereadInt(in, out);
+                handler.rootJNILocal(objId, threadSerial, frameNum);
                 bytesRead += idSize + 8;
             }
             case 0x03 -> {
                 // Root Java frame
-                l1 = rereadId(idSize, in, out);
-                i1 = rereadInt(in, out);
-                i2 = rereadInt(in, out);
-                handler.rootJavaFrame(l1, i1, i2);
+                long objId = rereadId(idSize, in, out);
+                int threadSerial = rereadInt(in, out);
+                int frameNum = rereadInt(in, out);
+                handler.rootJavaFrame(objId, threadSerial, frameNum);
                 bytesRead += idSize + 8;
             }
             case 0x04 -> {
                 // Root native stack
-                l1 = rereadId(idSize, in, out);
-                i1 = rereadInt(in, out);
-                handler.rootNativeStack(l1, i1);
+                long objId = rereadId(idSize, in, out);
+                int threadSerial = rereadInt(in, out);
+                handler.rootNativeStack(objId, threadSerial);
                 bytesRead += idSize + 4;
             }
             case 0x05 -> {
                 // Root sticky class
-                l1 = rereadId(idSize, in, out);
-                handler.rootStickyClass(l1);
+                long objId = rereadId(idSize, in, out);
+                handler.rootStickyClass(objId);
                 bytesRead += idSize;
             }
             case 0x06 -> {
                 // Root thread block
-                l1 = rereadId(idSize, in, out);
-                i1 = rereadInt(in, out);
-                handler.rootThreadBlock(l1, i1);
+                long objId = rereadId(idSize, in, out);
+                int threadSerial = rereadInt(in, out);
+                handler.rootThreadBlock(objId, threadSerial);
                 bytesRead += idSize + 4;
             }
             case 0x07 -> {
                 // Root monitor used
-                l1 = rereadId(idSize, in, out);
-                handler.rootMonitorUsed(l1);
+                long objId = rereadId(idSize, in, out);
+                handler.rootMonitorUsed(objId);
                 bytesRead += idSize;
             }
             case 0x08 -> {
                 // Root thread object
-                l1 = rereadId(idSize, in, out);
-                i1 = rereadInt(in, out);
-                i2 = rereadInt(in, out);
-                handler.rootThreadObj(l1, i1, i2);
+                long objId = rereadId(idSize, in, out);
+                int threadSerial = rereadInt(in, out);
+                int stackSerial = rereadInt(in, out);
+                handler.rootThreadObj(objId, threadSerial, stackSerial);
                 bytesRead += idSize + 8;
             }
             case 0x20 -> {
                 // Class dump
-                l1 = rereadId(idSize, in, out);
-                i1 = rereadInt(in, out);
-                l2 = rereadId(idSize, in, out);
-                l3 = rereadId(idSize, in, out);
-                l4 = rereadId(idSize, in, out);
-                l5 = rereadId(idSize, in, out);
-                l6 = rereadId(idSize, in, out);
-                l7 = rereadId(idSize, in, out);
-                final boolean remove = !firstPass && l1 == toRemove;
-                i2 = rereadInt(in, out);//TODO zero?
+                long classObjId = rereadId(idSize, in, out);
+                int stackSerial = rereadInt(in, out);
+                long superclassObjId = rereadId(idSize, in, out);
+                long loaderObjId = rereadId(idSize, in, out);
+                long signerObjId = rereadId(idSize, in, out);
+                long protectDomainId = rereadId(idSize, in, out);
+                long reserved1 = rereadId(idSize, in, out);
+                long reserved2 = rereadId(idSize, in, out);
+                final boolean remove = !firstPass && classObjId == toRemove;
+                int instanceSize = rereadInt(in, out);//TODO zero?
                 bytesRead += idSize * 7 + 8;
 
                 /* Constants */
-                s1 = rereadShort(in, out);    // number of constants
+                short numConstants = rereadShort(in, out);
                 bytesRead += 2;
-                Preconditions.checkState(s1 >= 0);
-                Constant[] constants = new Constant[s1];
-                for (int i = 0; i < s1; i++) {
+                Preconditions.checkState(numConstants >= 0);
+                Constant[] constants = new Constant[numConstants];
+                for (int i = 0; i < numConstants; i++) {
                     short constantPoolIndex = in.readShort();
                     out.writeShort(constantPoolIndex);
                     byte btype = rereadByte(in, out);
@@ -406,11 +412,11 @@ public class HprofParser {
                 }
 
                 /* Statics */
-                s2 = rereadShort(in, out);    // number of static fields
+                short numStatics = rereadShort(in, out);
                 bytesRead += 2;
-                Preconditions.checkState(s2 >= 0);
-                Static[] statics = new Static[s2];
-                for (int i = 0; i < s2; i++) {
+                Preconditions.checkState(numStatics >= 0);
+                Static[] statics = new Static[numStatics];
+                for (int i = 0; i < numStatics; i++) {
                     long staticFieldNameStringId = rereadId(idSize, in, out);
                     byte btype = rereadByte(in, out);
                     bytesRead += idSize + 1;
@@ -423,17 +429,17 @@ public class HprofParser {
                 }
 
                 /* Instance fields */
-                s3 = in.readShort();     // number of instance fields
+                short numFields = in.readShort();
                 if (remove) {
                     out.writeShort(0);
                 } else {
-                    out.writeShort(s3);
+                    out.writeShort(numFields);
                 }
                 bytesRead += 2;
-                Preconditions.checkState(s3 >= 0);
-                InstanceField[] instanceFields = new InstanceField[s3];
+                Preconditions.checkState(numFields >= 0);
+                InstanceField[] instanceFields = new InstanceField[numFields];
                 final int bytesBeforeFields = bytesRead;
-                for (int i = 0; i < s3; i++) {
+                for (int i = 0; i < numFields; i++) {
                     long fieldNameStringId = rereadId(idSize, in, remove ? DummyDataOutput.INSTANCE : out);
                     byte btype = in.readByte();
                     if (!remove) out.writeByte(btype);
@@ -441,7 +447,7 @@ public class HprofParser {
                     Type type = Type.hprofTypeToEnum(btype);
                     instanceFields[i] = new InstanceField(fieldNameStringId, type);
                 }
-                if (firstPass && l1 == toRemove) {
+                if (firstPass && classObjId == toRemove) {
                     newHeapdumpSize -= bytesRead - bytesBeforeFields;
                 }
 
@@ -451,29 +457,39 @@ public class HprofParser {
                  * its superclasses.  So we need to store class records in a hash
                  * table.
                  */
-                classMap.put(l1, new ClassInfo(l1, l2, i2, instanceFields));
-                handler.classDump(l1, i1, l2, l3, l4, l5, l6, l7, i2, constants,
-                        statics, instanceFields
+                classMap.put(classObjId, new ClassInfo(classObjId, superclassObjId, instanceSize, instanceFields));
+                handler.classDump(classObjId,
+                        stackSerial,
+                        superclassObjId,
+                        loaderObjId,
+                        signerObjId,
+                        protectDomainId,
+                        reserved1,
+                        reserved2,
+                        instanceSize,
+                        constants,
+                        statics,
+                        instanceFields
                 );
             }
             case 0x21 -> {
                 // Instance dump
-                l1 = rereadId(idSize, in, out);
-                i1 = rereadInt(in, out);
-                l2 = rereadId(idSize, in, out);    // class obj id
-                i2 = in.readInt();     // num of bytes that follow
-                final boolean remove2 = !firstPass && l2 == toRemove;
+                long objId = rereadId(idSize, in, out);
+                int stackSerial = rereadInt(in, out);
+                long classObjId = rereadId(idSize, in, out);
+                int bytesFollowing = in.readInt();
+                final boolean remove2 = !firstPass && classObjId == toRemove;
                 if (!remove2) {
-                    out.writeInt(i2);
+                    out.writeInt(bytesFollowing);
                 } else {
                     out.writeInt(0);
                 }
-                Preconditions.checkState(i2 >= 0);
-                bArr1 = new byte[i2];
-                in.readFully(bArr1);
-                if (!remove2) out.write(bArr1);
-                if (firstPass && l2 == toRemove) {
-                    newHeapdumpSize -= i2;
+                Preconditions.checkState(bytesFollowing >= 0);
+                byte[] packedData = new byte[bytesFollowing];
+                in.readFully(packedData);
+                if (!remove2) out.write(packedData);
+                if (firstPass && classObjId == toRemove) {
+                    newHeapdumpSize -= bytesFollowing;
                 }
 
                 /*
@@ -481,39 +497,39 @@ public class HprofParser {
                  * we don't know how to interpret the values yet.  we have to
                  * record the instances and process them at the end.
                  */
-                processInstance(new Instance(l1, i1, l2, bArr1), idSize);
-                bytesRead += idSize * 2 + 8 + i2;
+                processInstance(new Instance(objId, stackSerial, classObjId, packedData), idSize);
+                bytesRead += idSize * 2 + 8 + bytesFollowing;
             }
             case 0x22 -> {
                 // Object array dump
-                l1 = rereadId(idSize, in, out);
-                i1 = rereadInt(in, out);
-                i2 = rereadInt(in, out);    // number of elements
-                l2 = rereadId(idSize, in, out);
-                Preconditions.checkState(i2 >= 0);
-                lArr1 = new long[i2];
-                for (int i = 0; i < i2; i++) {
-                    lArr1[i] = rereadId(idSize, in, out);
+                long objId = rereadId(idSize, in, out);
+                int stackSerial = rereadInt(in, out);
+                int arraySize = rereadInt(in, out);
+                long elementClassObjId = rereadId(idSize, in, out);
+                Preconditions.checkState(arraySize >= 0);
+                long[] elementIds = new long[arraySize];
+                for (int i = 0; i < arraySize; i++) {
+                    elementIds[i] = rereadId(idSize, in, out);
                 }
-                handler.objArrayDump(l1, i1, l2, lArr1);
-                bytesRead += (2 + i2) * idSize + 8;
+                handler.objArrayDump(objId, stackSerial, elementClassObjId, elementIds);
+                bytesRead += (2 + arraySize) * idSize + 8;
             }
             case 0x23 -> {
                 // Primitive array dump
-                l1 = rereadId(idSize, in, out);
-                i1 = rereadInt(in, out);
-                i2 = rereadInt(in, out);    // number of elements
-                b1 = rereadByte(in, out);
+                long objId = rereadId(idSize, in, out);
+                int stackSerial = rereadInt(in, out);
+                int arraySize = rereadInt(in, out);
+                byte elementType = rereadByte(in, out);
                 bytesRead += idSize + 9;
-                Preconditions.checkState(i2 >= 0);
-                Value<?>[] vs = new Value[i2];
-                Type t = Type.hprofTypeToEnum(b1);
+                Preconditions.checkState(arraySize >= 0);
+                Value<?>[] values = new Value[arraySize];
+                Type t = Type.hprofTypeToEnum(elementType);
                 int[] byteReadRef = {bytesRead};
-                for (int i = 0; i < vs.length; i++) {
-                    vs[i] = rereadValue(t, idSize, in, out, byteReadRef);
+                for (int i = 0; i < values.length; i++) {
+                    values[i] = rereadValue(t, idSize, in, out, byteReadRef);
                 }
                 bytesRead = byteReadRef[0];
-                handler.primArrayDump(l1, i1, b1, vs);
+                handler.primArrayDump(objId, stackSerial, elementType, values);
             }
             default -> throw new HprofParserException("Unexpected heap dump sub-record type: " + tag);
         }
