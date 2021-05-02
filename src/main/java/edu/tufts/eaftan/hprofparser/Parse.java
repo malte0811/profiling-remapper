@@ -45,46 +45,46 @@ import java.io.IOException;
 import java.util.List;
 
 public class Parse {
-  
-  private static final Class<? extends RecordHandler> DEFAULT_HANDLER = NullRecordHandler.class; 
 
-  public static void main(String[] args) {
-    
-    List<String> argList = Lists.newArrayList(args);
+    private static final Class<? extends RecordHandler> DEFAULT_HANDLER = NullRecordHandler.class;
 
-    if (argList.size() < 1) {
-      System.out.println("Usage: java Parse [--handler=<handler class>] inputfile");
-      System.exit(1);
-    }
-    
-    Class<? extends RecordHandler> handlerClass = DEFAULT_HANDLER;
-    for (String arg : argList) {
-      if (arg.startsWith("--handler=")) {
-        String handlerClassName = arg.substring("--handler=".length());
-        try {
-          handlerClass = (Class<? extends RecordHandler>) Class.forName(handlerClassName);
-        } catch (ClassNotFoundException e) {
-          System.err.println("Could not find class " + handlerClassName);
-          System.exit(1);
+    public static void main(String[] args) {
+
+        List<String> argList = Lists.newArrayList(args);
+
+        if (argList.size() < 1) {
+            System.out.println("Usage: java Parse [--handler=<handler class>] inputfile");
+            System.exit(1);
         }
-      }
-    }
 
-    RecordHandler handler = null;
-    try {
-      handler = handlerClass.newInstance();
-    } catch (InstantiationException | IllegalAccessException e) {
-      System.err.println("Could not instantiate " + handlerClass);
-      System.exit(1);
-    }
-    HprofParser parser = new HprofParser(handler);
+        Class<? extends RecordHandler> handlerClass = DEFAULT_HANDLER;
+        for (String arg : argList) {
+            if (arg.startsWith("--handler=")) {
+                String handlerClassName = arg.substring("--handler=".length());
+                try {
+                    handlerClass = (Class<? extends RecordHandler>) Class.forName(handlerClassName);
+                } catch (ClassNotFoundException e) {
+                    System.err.println("Could not find class " + handlerClassName);
+                    System.exit(1);
+                }
+            }
+        }
 
-    try {
-      parser.parse(new File(argList.get(argList.size() - 1)));
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
+        RecordHandler handler = null;
+        try {
+            handler = handlerClass.newInstance();
+        } catch (InstantiationException | IllegalAccessException e) {
+            System.err.println("Could not instantiate " + handlerClass);
+            System.exit(1);
+        }
+        HprofParser parser = new HprofParser(handler);
 
-  }
+        try {
+            parser.parse(new File(argList.get(argList.size() - 1)));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+    }
 
 }

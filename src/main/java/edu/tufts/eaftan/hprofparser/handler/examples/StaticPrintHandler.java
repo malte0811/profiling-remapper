@@ -25,48 +25,53 @@ import edu.tufts.eaftan.hprofparser.parser.datastructures.Type;
 import java.util.HashMap;
 
 public class StaticPrintHandler extends NullRecordHandler {
-  
-  private HashMap<Long, String> stringMap = new HashMap<Long, String>();
-  private HashMap<Long, ClassInfo> classMap = new HashMap<Long, ClassInfo>();
-  
-  private static class ClassInfo {
-    public final String name;
-    public ClassInfo(String name) {
-      this.name = name;
-    }
-  }
-  
-  @Override
-  public void stringInUTF8(long id, String data) {
-    // store string for later lookup
-    stringMap.put(id, data);
-  }
-  
-  @Override
-  public void loadClass(int classSerialNum, long classObjId, 
-      int stackTraceSerialNum, long classNameStringId) {
-    ClassInfo cls = new ClassInfo(stringMap.get(classNameStringId));
-    classMap.put(classObjId, cls);
-  }
 
-  @Override
-  public void classDump(long classObjId, int stackTraceSerialNum, 
-      long superClassObjId, long classLoaderObjId, long signersObjId,
-      long protectionDomainObjId, long reserved1, long reserved2, 
-      int instanceSize, Constant[] constants, Static[] statics,
-      InstanceField[] instanceFields) {
-    
-    ClassInfo cls = classMap.get(classObjId);
-    if (cls == null) {
-      System.err.println("Error: Could not find class " + classObjId + " from classdump");
-      System.exit(1);
+    private HashMap<Long, String> stringMap = new HashMap<Long, String>();
+    private HashMap<Long, ClassInfo> classMap = new HashMap<Long, ClassInfo>();
+
+    private static class ClassInfo {
+        public final String name;
+
+        public ClassInfo(String name) {
+            this.name = name;
+        }
     }
-    
-    for (Static s: statics) {
-      if (s.value.type == Type.OBJ) {
-        System.out.println("Static, " + cls.name + ", " + stringMap.get(s.staticFieldNameStringId));
-      }
-    }        
-  }
-  
+
+    @Override
+    public void stringInUTF8(long id, String data) {
+        // store string for later lookup
+        stringMap.put(id, data);
+    }
+
+    @Override
+    public void loadClass(
+            int classSerialNum, long classObjId,
+            int stackTraceSerialNum, long classNameStringId
+    ) {
+        ClassInfo cls = new ClassInfo(stringMap.get(classNameStringId));
+        classMap.put(classObjId, cls);
+    }
+
+    @Override
+    public void classDump(
+            long classObjId, int stackTraceSerialNum,
+            long superClassObjId, long classLoaderObjId, long signersObjId,
+            long protectionDomainObjId, long reserved1, long reserved2,
+            int instanceSize, Constant[] constants, Static[] statics,
+            InstanceField[] instanceFields
+    ) {
+
+        ClassInfo cls = classMap.get(classObjId);
+        if (cls == null) {
+            System.err.println("Error: Could not find class " + classObjId + " from classdump");
+            System.exit(1);
+        }
+
+        for (Static s : statics) {
+            if (s.value.type == Type.OBJ) {
+                System.out.println("Static, " + cls.name + ", " + stringMap.get(s.staticFieldNameStringId));
+            }
+        }
+    }
+
 }
