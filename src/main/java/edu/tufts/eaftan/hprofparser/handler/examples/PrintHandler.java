@@ -76,6 +76,7 @@ public class PrintHandler extends NullRecordHandler {
   public void stackFrame(long stackFrameId, long methodNameStringId, 
       long methodSigStringId, long sourceFileNameStringId, 
       int classSerialNum, int location) {
+      if (true) return;
     System.out.println("Stack Frame:");
     System.out.println("    stack frame id: " + stackFrameId);
     System.out.println("    method name string: " + stringMap.get(methodNameStringId));
@@ -112,6 +113,7 @@ public class PrintHandler extends NullRecordHandler {
   @Override
   public void stackTrace(int stackTraceSerialNum, int threadSerialNum, 
       int numFrames, long[] stackFrameIds) {
+      if (true) return;
     System.out.println("Stack Trace:");
     System.out.println("    stack trace serial num: " + stackTraceSerialNum);
     System.out.println("    thread serial num: " + threadSerialNum);

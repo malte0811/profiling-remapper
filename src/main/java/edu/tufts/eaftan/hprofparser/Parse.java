@@ -35,6 +35,7 @@ package edu.tufts.eaftan.hprofparser;
 import com.google.common.collect.Lists;
 
 import edu.tufts.eaftan.hprofparser.handler.examples.PrintHandler;
+import edu.tufts.eaftan.hprofparser.handler.NullRecordHandler;
 
 import edu.tufts.eaftan.hprofparser.handler.RecordHandler;
 import edu.tufts.eaftan.hprofparser.parser.HprofParser;
@@ -45,7 +46,7 @@ import java.util.List;
 
 public class Parse {
   
-  private static final Class<? extends RecordHandler> DEFAULT_HANDLER = PrintHandler.class; 
+  private static final Class<? extends RecordHandler> DEFAULT_HANDLER = NullRecordHandler.class; 
 
   public static void main(String[] args) {
     
@@ -81,8 +82,8 @@ public class Parse {
     try {
       parser.parse(new File(argList.get(argList.size() - 1)));
     } catch (IOException e) {
-      System.err.println(e);
-    } 
+      e.printStackTrace();
+    }
 
   }
 
