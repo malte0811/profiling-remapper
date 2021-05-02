@@ -501,63 +501,9 @@ public class HprofParser {
                     out.writeByte(btype);
                     bytesRead += 3;
                     Type type = Type.hprofTypeToEnum(btype);
-                    Value<?> v = null;
-
-                    switch (type) {
-                        case OBJ:
-                            long vid = readId(idSize, in, out);
-                            bytesRead += idSize;
-                            v = new Value<>(type, vid);
-                            break;
-                        case BOOL:
-                            boolean vbool = in.readBoolean();
-                            out.writeBoolean(vbool);
-                            bytesRead += 1;
-                            v = new Value<>(type, vbool);
-                            break;
-                        case CHAR:
-                            char vc = in.readChar();
-                            out.writeChar(vc);
-                            bytesRead += 2;
-                            v = new Value<>(type, vc);
-                            break;
-                        case FLOAT:
-                            float vf = in.readFloat();
-                            out.writeFloat(vf);
-                            bytesRead += 4;
-                            v = new Value<>(type, vf);
-                            break;
-                        case DOUBLE:
-                            double vd = in.readDouble();
-                            out.writeDouble(vd);
-                            bytesRead += 8;
-                            v = new Value<>(type, vd);
-                            break;
-                        case BYTE:
-                            byte vbyte = in.readByte();
-                            out.writeByte(vbyte);
-                            bytesRead += 1;
-                            v = new Value<>(type, vbyte);
-                            break;
-                        case SHORT:
-                            short vs = in.readShort();
-                            out.writeShort(vs);
-                            bytesRead += 2;
-                            v = new Value<>(type, vs);
-                            break;
-                        case INT:
-                            int vi = in.readInt();
-                            out.writeInt(vi);
-                            bytesRead += 4;
-                            v = new Value<>(type, vi);
-                            break;
-                        case LONG:
-                            long vl = in.readLong();
-                            out.writeLong(vl);
-                            bytesRead += 8;
-                            v = new Value<>(type, vl);
-                            break;
-                    }
+                    int[] bytesReadRef = {bytesRead};
+                    Value<?> v = readValue(type, idSize, in, out, bytesReadRef);
+                    bytesRead = bytesReadRef[0];
 
                     constants[i] = new Constant(constantPoolIndex, v);
                 }
@@ -574,63 +520,9 @@ public class HprofParser {
                     out.writeByte(btype);
                     bytesRead += idSize + 1;
                     Type type = Type.hprofTypeToEnum(btype);
-                    Value<?> v = null;
-
-                    switch (type) {
-                        case OBJ:     // object
-                            long vid = readId(idSize, in, out);
-                            bytesRead += idSize;
-                            v = new Value<>(type, vid);
-                            break;
-                        case BOOL:     // boolean
-                            boolean vbool = in.readBoolean();
-                            out.writeBoolean(vbool);
-                            bytesRead += 1;
-                            v = new Value<>(type, vbool);
-                            break;
-                        case CHAR:     // char
-                            char vc = in.readChar();
-                            out.writeChar(vc);
-                            bytesRead += 2;
-                            v = new Value<>(type, vc);
-                            break;
-                        case FLOAT:     // float
-                            float vf = in.readFloat();
-                            out.writeFloat(vf);
-                            bytesRead += 4;
-                            v = new Value<>(type, vf);
-                            break;
-                        case DOUBLE:     // double
-                            double vd = in.readDouble();
-                            out.writeDouble(vd);
-                            bytesRead += 8;
-                            v = new Value<>(type, vd);
-                            break;
-                        case BYTE:     // byte
-                            byte vbyte = in.readByte();
-                            out.writeByte(vbyte);
-                            bytesRead += 1;
-                            v = new Value<>(type, vbyte);
-                            break;
-                        case SHORT:     // short
-                            short vs = in.readShort();
-                            out.writeShort(vs);
-                            bytesRead += 2;
-                            v = new Value<>(type, vs);
-                            break;
-                        case INT:    // int
-                            int vi = in.readInt();
-                            out.writeInt(vi);
-                            bytesRead += 4;
-                            v = new Value<>(type, vi);
-                            break;
-                        case LONG:    // long
-                            long vl = in.readLong();
-                            out.writeLong(vl);
-                            bytesRead += 8;
-                            v = new Value<>(type, vl);
-                            break;
-                    }
+                    int[] bytesReadRef = {bytesRead};
+                    Value<?> v = readValue(type, idSize, in, out, bytesReadRef);
+                    bytesRead = bytesReadRef[0];
 
                     statics[i] = new Static(staticFieldNameStringId, v);
                 }
@@ -813,45 +705,8 @@ public class HprofParser {
             ClassInfo ci = classMap.get(nextClass);
             nextClass = ci.superClassObjId;
             for (InstanceField field : ci.instanceFields) {
-                Value<?> v = null;
-                switch (field.type) {
-                    case OBJ:     // object
-                        long vid = readId(idSize, input, DummyDataOutput.INSTANCE);
-                        v = new Value<>(field.type, vid);
-                        break;
-                    case BOOL:     // boolean
-                        boolean vbool = input.readBoolean();
-                        v = new Value<>(field.type, vbool);
-                        break;
-                    case CHAR:     // char
-                        char vc = input.readChar();
-                        v = new Value<>(field.type, vc);
-                        break;
-                    case FLOAT:     // float
-                        float vf = input.readFloat();
-                        v = new Value<>(field.type, vf);
-                        break;
-                    case DOUBLE:     // double
-                        double vd = input.readDouble();
-                        v = new Value<>(field.type, vd);
-                        break;
-                    case BYTE:     // byte
-                        byte vbyte = input.readByte();
-                        v = new Value<>(field.type, vbyte);
-                        break;
-                    case SHORT:     // short
-                        short vs = input.readShort();
-                        v = new Value<>(field.type, vs);
-                        break;
-                    case INT:    // int
-                        int vi = input.readInt();
-                        v = new Value<>(field.type, vi);
-                        break;
-                    case LONG:    // long
-                        long vl = input.readLong();
-                        v = new Value<>(field.type, vl);
-                        break;
-                }
+                int[] bytesReadRef = {0};
+                Value<?> v = readValue(field.type, idSize, input, DummyDataOutput.INSTANCE, bytesReadRef);
                 values.add(v);
             }
         }
@@ -876,22 +731,62 @@ public class HprofParser {
         return id;
     }
 
-
-    /* Utility */
-
-    private int mySkipBytes(int n, DataInput in) throws IOException {
-        int bytesRead = 0;
-
-        try {
-            while (bytesRead < n) {
-                in.readByte();
-                bytesRead++;
+    private Value<?> readValue(Type type, int idSize, DataInput in, DataOutput out, int[] bytesReadRef) throws IOException {
+        return switch (type) {
+            case OBJ -> {
+                long vid = readId(idSize, in, out);
+                bytesReadRef[0] += idSize;
+                yield new Value<>(type, vid);
             }
-        } catch (EOFException e) {
-            // expected
-        }
-
-        return bytesRead;
+            case BOOL -> {
+                boolean vbool = in.readBoolean();
+                out.writeBoolean(vbool);
+                bytesReadRef[0] += 1;
+                yield new Value<>(type, vbool);
+            }
+            case CHAR -> {
+                char vc = in.readChar();
+                out.writeChar(vc);
+                bytesReadRef[0] += 2;
+                yield new Value<>(type, vc);
+            }
+            case FLOAT -> {
+                float vf = in.readFloat();
+                out.writeFloat(vf);
+                bytesReadRef[0] += 4;
+                yield new Value<>(type, vf);
+            }
+            case DOUBLE -> {
+                double vd = in.readDouble();
+                out.writeDouble(vd);
+                bytesReadRef[0] += 8;
+                yield new Value<>(type, vd);
+            }
+            case BYTE -> {
+                byte vbyte = in.readByte();
+                out.writeByte(vbyte);
+                bytesReadRef[0] += 1;
+                yield new Value<>(type, vbyte);
+            }
+            case SHORT -> {
+                short vs = in.readShort();
+                out.writeShort(vs);
+                bytesReadRef[0] += 2;
+                yield new Value<>(type, vs);
+            }
+            case INT -> {
+                int vi = in.readInt();
+                out.writeInt(vi);
+                bytesReadRef[0] += 4;
+                yield new Value<>(type, vi);
+            }
+            case LONG -> {
+                long vl = in.readLong();
+                out.writeLong(vl);
+                bytesReadRef[0] += 8;
+                yield new Value<>(type, vl);
+            }
+        };
     }
 }
 
