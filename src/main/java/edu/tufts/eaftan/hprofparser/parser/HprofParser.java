@@ -17,7 +17,10 @@
 package edu.tufts.eaftan.hprofparser.parser;
 
 import com.google.common.base.Preconditions;
-import edu.tufts.eaftan.hprofparser.parser.datastructures.*;
+import edu.tufts.eaftan.hprofparser.parser.datastructures.ClassInfo;
+import edu.tufts.eaftan.hprofparser.parser.datastructures.InstanceField;
+import edu.tufts.eaftan.hprofparser.parser.datastructures.Static;
+import edu.tufts.eaftan.hprofparser.parser.datastructures.Type;
 import it.unimi.dsi.fastutil.longs.Long2LongMap;
 import it.unimi.dsi.fastutil.longs.Long2LongOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -26,7 +29,7 @@ import net.minecraftforge.srgutils.IMappingFile;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
+import java.util.function.ToLongFunction;
 
 /**
  * Parses an hprof heap dump file in binary format.  The hprof dump file format is documented in
@@ -210,9 +213,9 @@ public class HprofParser {
                 int threadSerialNum = rereadInt(in, out);
                 int numFrames = rereadInt(in, out);
                 bytesLeft -= 12;
-                long[] frameIds = new long[(int) bytesLeft / idSize];
-                for (int i = 0; i < frameIds.length; i++) {
-                    frameIds[i] = rereadId(idSize, in, out);
+                var numFrames2 = (int) (bytesLeft / idSize);//TODO == numFrames?
+                for (int i = 0; i < numFrames2; i++) {
+                    long frameId = rereadId(idSize, in, out);
                 }
             }
             case 0x6 -> {
@@ -268,11 +271,10 @@ public class HprofParser {
             case 0xd -> {
                 // CPU samples
                 int totalNumSamples = rereadInt(in, out);
-                CPUSample[] samples = new CPUSample[rereadInt(in, out)];
-                for (int i = 0; i < samples.length; i++) {
+                int numTraces = rereadInt(in, out);
+                for (int i = 0; i < numTraces; i++) {
                     int numSamples = rereadInt(in, out);
                     int stackSerial = rereadInt(in, out);
-                    samples[i] = new CPUSample(numSamples, stackSerial);
                 }
             }
             case 0xe -> {
@@ -365,7 +367,6 @@ public class HprofParser {
                 short numConstants = rereadShort(in, out);
                 bytesRead += 2;
                 Preconditions.checkState(numConstants >= 0);
-                Constant[] constants = new Constant[numConstants];
                 for (int i = 0; i < numConstants; i++) {
                     short constantPoolIndex = in.readShort();
                     out.writeShort(constantPoolIndex);
@@ -373,10 +374,8 @@ public class HprofParser {
                     bytesRead += 3;
                     Type type = Type.hprofTypeToEnum(btype);
                     int[] bytesReadRef = {bytesRead};
-                    Value<?> v = rereadValue(type, idSize, in, out, bytesReadRef);
+                    rereadValue(type, idSize, in, out, bytesReadRef);
                     bytesRead = bytesReadRef[0];
-
-                    constants[i] = new Constant(constantPoolIndex, v);
                 }
 
                 /* Statics */
@@ -390,10 +389,10 @@ public class HprofParser {
                     bytesRead += idSize + 1;
                     Type type = Type.hprofTypeToEnum(btype);
                     int[] bytesReadRef = {bytesRead};
-                    Value<?> v = rereadValue(type, idSize, in, out, bytesReadRef);
+                    rereadValue(type, idSize, in, out, bytesReadRef);
                     bytesRead = bytesReadRef[0];
 
-                    statics[i] = new Static(staticFieldNameStringId, v);
+                    statics[i] = new Static(staticFieldNameStringId);
                 }
 
                 /* Instance fields */
@@ -416,7 +415,10 @@ public class HprofParser {
                  * its superclasses.  So we need to store class records in a hash
                  * table.
                  */
-                classMap.put(classObjId, new ClassInfo(classObjId, superclassObjId, instanceSize, instanceFields));
+                classMap.put(
+                        classObjId,
+                        new ClassInfo(classObjId, superclassObjId, instanceSize, instanceFields, statics)
+                );
             }
             case 0x21 -> {
                 // Instance dump
@@ -430,12 +432,6 @@ public class HprofParser {
                 in.readFully(packedData);
                 out.write(packedData);
 
-                /*
-                 * because class dump records come *after* instance dump records,
-                 * we don't know how to interpret the values yet.  we have to
-                 * record the instances and process them at the end.
-                 */
-                processInstance(new Instance(objId, stackSerial, classObjId, packedData), idSize);
                 bytesRead += idSize * 2 + 8 + bytesFollowing;
             }
             case 0x22 -> {
@@ -445,9 +441,8 @@ public class HprofParser {
                 int arraySize = rereadInt(in, out);
                 long elementClassObjId = rereadId(idSize, in, out);
                 Preconditions.checkState(arraySize >= 0);
-                long[] elementIds = new long[arraySize];
                 for (int i = 0; i < arraySize; i++) {
-                    elementIds[i] = rereadId(idSize, in, out);
+                    long elementId = rereadId(idSize, in, out);
                 }
                 bytesRead += (2 + arraySize) * idSize + 8;
             }
@@ -459,11 +454,10 @@ public class HprofParser {
                 byte elementType = rereadByte(in, out);
                 bytesRead += idSize + 9;
                 Preconditions.checkState(arraySize >= 0);
-                Value<?>[] values = new Value[arraySize];
                 Type t = Type.hprofTypeToEnum(elementType);
                 int[] byteReadRef = {bytesRead};
-                for (int i = 0; i < values.length; i++) {
-                    values[i] = rereadValue(t, idSize, in, out, byteReadRef);
+                for (int i = 0; i < arraySize; i++) {
+                    rereadValue(t, idSize, in, out, byteReadRef);
                 }
                 bytesRead = byteReadRef[0];
             }
@@ -472,27 +466,6 @@ public class HprofParser {
 
         return bytesRead;
 
-    }
-
-    private void processInstance(Instance i, int idSize) throws IOException {
-        ByteArrayInputStream bs = new ByteArrayInputStream(i.packedValues);
-        DataInputStream input = new DataInputStream(bs);
-
-        ArrayList<Value<?>> values = new ArrayList<>();
-
-        // superclass of Object is 0
-        long nextClass = i.classObjId;
-        while (nextClass != 0) {
-            ClassInfo ci = classMap.get(nextClass);
-            nextClass = ci.superClassObjId;
-            for (InstanceField field : ci.instanceFields) {
-                int[] bytesReadRef = {0};
-                Value<?> v = rereadValue(field.type, idSize, input, DummyDataOutput.INSTANCE, bytesReadRef);
-                values.add(v);
-            }
-        }
-        Value<?>[] valuesArr = new Value[values.size()];
-        valuesArr = values.toArray(valuesArr);
     }
 
     private static long readId(int idSize, DataInput in) throws IOException {
@@ -573,70 +546,52 @@ public class HprofParser {
         return result;
     }
 
-    private static void rereadFully(DataInput in, DataOutput out, byte[] data) throws IOException {
-        in.readFully(data);
-        out.write(data);
-    }
-
-    private Value<?> rereadValue(
-            Type type,
-            int idSize,
-            DataInput in,
-            DataOutput out,
-            int[] bytesReadRef
+    private void rereadValue(
+            Type type, int idSize, DataInput in, DataOutput out, int[] bytesReadRef
     ) throws IOException {
-        return switch (type) {
+        switch (type) {
             case OBJ -> {
                 long vid = rereadId(idSize, in, out);
                 bytesReadRef[0] += idSize;
-                yield new Value<>(type, vid);
             }
             case BOOL -> {
                 boolean vbool = rereadBoolean(in, out);
                 bytesReadRef[0] += 1;
-                yield new Value<>(type, vbool);
             }
             case CHAR -> {
                 char vc = rereadChar(in, out);
                 bytesReadRef[0] += 2;
-                yield new Value<>(type, vc);
             }
             case FLOAT -> {
                 float vf = rereadFloat(in, out);
                 bytesReadRef[0] += 4;
-                yield new Value<>(type, vf);
             }
             case DOUBLE -> {
                 double vd = rereadDouble(in, out);
                 bytesReadRef[0] += 8;
-                yield new Value<>(type, vd);
             }
             case BYTE -> {
                 byte vbyte = rereadByte(in, out);
                 bytesReadRef[0] += 1;
-                yield new Value<>(type, vbyte);
             }
             case SHORT -> {
                 short vs = rereadShort(in, out);
                 bytesReadRef[0] += 2;
-                yield new Value<>(type, vs);
             }
             case INT -> {
                 int vi = rereadInt(in, out);
                 bytesReadRef[0] += 4;
-                yield new Value<>(type, vi);
             }
             case LONG -> {
                 long vl = rereadLong(in, out);
                 bytesReadRef[0] += 8;
-                yield new Value<>(type, vl);
             }
         };
     }
 
     private void remap() {
         for (var clazz : classMap.values()) {
-            var classNameId = classIdToNameId.get(clazz.classObjId);
+            var classNameId = classIdToNameId.get(clazz.classObjId());
             var className = strings.get(classNameId);
             if (className == null) {
                 System.out.println("Failed to find class name for ID " + classNameId);
@@ -646,17 +601,24 @@ public class HprofParser {
             if (classMappings == null) {
                 continue;
             }
-            for (var field : clazz.instanceFields) {
-                var oldName = strings.get(field.fieldNameStringId);
-                Preconditions.checkNotNull(oldName);
-                var newName = classMappings.remapField(oldName);
-                if (newName == null) {
-                    System.out.println("Failed to remap field " + oldName + " of class " + className);
-                    continue;
-                }
-                strings.put(field.fieldNameStringId, newName);
+            remapFields(clazz.instanceFields(), InstanceField::fieldNameId, classMappings, className);
+            remapFields(clazz.statics(), Static::fieldNameId, classMappings, className);
+        }
+    }
+
+    private <T> void remapFields(
+            T[] fields, ToLongFunction<T> getName, IMappingFile.IClass mappings, String className
+    ) {
+        for (var field : fields) {
+            var nameId = getName.applyAsLong(field);
+            var oldName = strings.get(nameId);
+            Preconditions.checkNotNull(oldName);
+            var newName = mappings.remapField(oldName);
+            if (newName == null) {
+                System.out.println("Failed to remap field " + oldName + " of class " + className);
+                continue;
             }
-            //TODO remap statics!
+            strings.put(nameId, newName);
         }
     }
 }

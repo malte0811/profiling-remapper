@@ -20,58 +20,41 @@ import edu.tufts.eaftan.hprofparser.parser.HprofParserException;
 
 public enum Type {
 
-    OBJ("Object", 4),
-    BOOL("boolean", 1),
-    CHAR("char", 2),
-    FLOAT("float", 4),
-    DOUBLE("double", 8),
-    BYTE("byte", 1),
-    SHORT("short", 2),
-    INT("int", 4),
-    LONG("long", 8);
+    OBJ("Object"),
+    BOOL("boolean"),
+    CHAR("char"),
+    FLOAT("float"),
+    DOUBLE("double"),
+    BYTE("byte"),
+    SHORT("short"),
+    INT("int"),
+    LONG("long");
 
     private final String name;
-    private final int sizeInBytes;
 
-    private Type(String name, int sizeInBytes) {
+    Type(String name) {
         this.name = name;
-        this.sizeInBytes = sizeInBytes;
-    }
-
-    public int sizeInBytes() {
-        return sizeInBytes;
     }
 
     public static Type hprofTypeToEnum(byte type) {
-        switch (type) {
-            case 2:
-                return OBJ;
-            case 4:
-                return BOOL;
-            case 5:
-                return CHAR;
-            case 6:
-                return FLOAT;
-            case 7:
-                return DOUBLE;
-            case 8:
-                return BYTE;
-            case 9:
-                return SHORT;
-            case 10:
-                return INT;
-            case 11:
-                return LONG;
-            default:
-                throw new HprofParserException("Unexpected type in heap dump: " + type);
-        }
+        return switch (type) {
+            case 2 -> OBJ;
+            case 4 -> BOOL;
+            case 5 -> CHAR;
+            case 6 -> FLOAT;
+            case 7 -> DOUBLE;
+            case 8 -> BYTE;
+            case 9 -> SHORT;
+            case 10 -> INT;
+            case 11 -> LONG;
+            default -> throw new HprofParserException("Unexpected type in heap dump: " + type);
+        };
     }
 
     @Override
     public String toString() {
         return name;
     }
-
 }
 
 
