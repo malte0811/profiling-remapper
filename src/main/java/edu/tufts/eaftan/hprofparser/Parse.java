@@ -32,55 +32,22 @@
 
 package edu.tufts.eaftan.hprofparser;
 
-import com.google.common.collect.Lists;
-
-import edu.tufts.eaftan.hprofparser.handler.examples.PrintHandler;
-import edu.tufts.eaftan.hprofparser.handler.NullRecordHandler;
-
-import edu.tufts.eaftan.hprofparser.handler.RecordHandler;
 import edu.tufts.eaftan.hprofparser.parser.HprofParser;
+import net.minecraftforge.srgutils.IMappingFile;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.List;
+import java.nio.file.Path;
 
 public class Parse {
+    private static final String MAPPINGS = "/media/data/gradle_cache/caches/forge_gradle/minecraft_user_repo/de/oceanlabs/mcp/mcp_config/1.18.1-20211210.034407/srg_to_official_1.18.1.tsrg";
 
-    private static final Class<? extends RecordHandler> DEFAULT_HANDLER = NullRecordHandler.class;
-
-    public static void main(String[] args) {
-
-        List<String> argList = Lists.newArrayList(args);
-
-        if (argList.size() < 1) {
-            System.out.println("Usage: java Parse [--handler=<handler class>] inputfile");
-            System.exit(1);
-        }
-
-        Class<? extends RecordHandler> handlerClass = DEFAULT_HANDLER;
-        for (String arg : argList) {
-            if (arg.startsWith("--handler=")) {
-                String handlerClassName = arg.substring("--handler=".length());
-                try {
-                    handlerClass = (Class<? extends RecordHandler>) Class.forName(handlerClassName);
-                } catch (ClassNotFoundException e) {
-                    System.err.println("Could not find class " + handlerClassName);
-                    System.exit(1);
-                }
-            }
-        }
-
-        RecordHandler handler = null;
-        try {
-            handler = handlerClass.newInstance();
-        } catch (InstantiationException | IllegalAccessException e) {
-            System.err.println("Could not instantiate " + handlerClass);
-            System.exit(1);
-        }
-        HprofParser parser = new HprofParser(handler);
+    public static void main(String[] args) throws Exception {
+        var mappings = IMappingFile.load(Path.of(MAPPINGS).toFile());
+        HprofParser parser = new HprofParser(mappings);
 
         try {
-            parser.parse(new File(argList.get(argList.size() - 1)));
+            parser.parse(new File("/media/data/Modding/IE-server-118/general.hprof"));
         } catch (IOException e) {
             e.printStackTrace();
         }
