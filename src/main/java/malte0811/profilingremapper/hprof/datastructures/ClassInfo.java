@@ -14,14 +14,12 @@
  * limitations under the License.
  */
 
-package edu.tufts.eaftan.hprofparser.parser;
+package malte0811.profilingremapper.hprof.datastructures;
 
-/**
- * Thrown when the parser doesn't understand something about the the heap dump.  Since there is
- * no reasonable way to recover from these, they are unchecked.
- */
-public class HprofParserException extends RuntimeException {
-    public HprofParserException(String message) {
-        super(message);
-    }
-}
+public record ClassInfo(
+        long classObjId,
+        long superClassObjId,
+        int instanceSize,
+        InstanceField[] instanceFields,
+        Static[] statics
+) {}

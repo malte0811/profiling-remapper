@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-package edu.tufts.eaftan.hprofparser.parser;
+package malte0811.profilingremapper.hprof;
 
 import com.google.common.base.Preconditions;
-import edu.tufts.eaftan.hprofparser.parser.datastructures.ClassInfo;
-import edu.tufts.eaftan.hprofparser.parser.datastructures.InstanceField;
-import edu.tufts.eaftan.hprofparser.parser.datastructures.Static;
-import edu.tufts.eaftan.hprofparser.parser.datastructures.Type;
 import it.unimi.dsi.fastutil.longs.Long2LongMap;
 import it.unimi.dsi.fastutil.longs.Long2LongOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
+import malte0811.profilingremapper.hprof.datastructures.ClassInfo;
+import malte0811.profilingremapper.hprof.datastructures.InstanceField;
+import malte0811.profilingremapper.hprof.datastructures.Static;
+import malte0811.profilingremapper.hprof.datastructures.Type;
 import net.minecraftforge.srgutils.IMappingFile;
 
 import java.io.*;

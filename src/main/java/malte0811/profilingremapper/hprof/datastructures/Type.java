@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package edu.tufts.eaftan.hprofparser.parser.datastructures;
+package malte0811.profilingremapper.hprof.datastructures;
 
-import edu.tufts.eaftan.hprofparser.parser.HprofParserException;
+import malte0811.profilingremapper.hprof.HprofParserException;
 
 public enum Type {
 

@@ -14,12 +14,6 @@
  * limitations under the License.
  */
 
-package edu.tufts.eaftan.hprofparser.parser.datastructures;
+package malte0811.profilingremapper.hprof.datastructures;
 
-public record ClassInfo(
-        long classObjId,
-        long superClassObjId,
-        int instanceSize,
-        InstanceField[] instanceFields,
-        Static[] statics
-) {}
+public record InstanceField(long fieldNameId, Type type) {}

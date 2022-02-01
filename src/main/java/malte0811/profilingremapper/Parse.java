@@ -30,9 +30,9 @@
  * limitations under the License.
  */
 
-package edu.tufts.eaftan.hprofparser;
+package malte0811.profilingremapper;
 
-import edu.tufts.eaftan.hprofparser.parser.HprofParser;
+import malte0811.profilingremapper.hprof.HprofParser;
 import net.minecraftforge.srgutils.IMappingFile;
 
 import java.io.File;

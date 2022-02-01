@@ -1,4 +1,4 @@
-package edu.tufts.eaftan.hprofparser.parser;
+package malte0811.profilingremapper.hprof;
 
 import java.io.DataOutput;
 import java.io.IOException;

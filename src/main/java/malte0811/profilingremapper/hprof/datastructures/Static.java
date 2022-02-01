@@ -14,6 +14,6 @@
  * limitations under the License.
  */
 
-package edu.tufts.eaftan.hprofparser.parser.datastructures;
+package malte0811.profilingremapper.hprof.datastructures;
 
 public record Static(long fieldNameId) {}

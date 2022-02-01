@@ -1,6 +1,6 @@
-package edu.tufts.eaftan.hprofparser.parser;
+package malte0811.profilingremapper.hprof;
 
-import edu.tufts.eaftan.hprofparser.parser.datastructures.Type;
+import malte0811.profilingremapper.hprof.datastructures.Type;
 
 import java.io.DataInput;
 import java.io.DataOutput;
