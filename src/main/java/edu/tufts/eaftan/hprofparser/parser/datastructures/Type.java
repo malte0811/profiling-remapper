@@ -20,20 +20,30 @@ import edu.tufts.eaftan.hprofparser.parser.HprofParserException;
 
 public enum Type {
 
-    OBJ("Object"),
-    BOOL("boolean"),
-    CHAR("char"),
-    FLOAT("float"),
-    DOUBLE("double"),
-    BYTE("byte"),
-    SHORT("short"),
-    INT("int"),
-    LONG("long");
+    OBJ("Object", 4),
+    BOOL("boolean", 1),
+    CHAR("char", 2),
+    FLOAT("float", 4),
+    DOUBLE("double", 8),
+    BYTE("byte", 1),
+    SHORT("short", 2),
+    INT("int", 4),
+    LONG("long", 8);
 
     private final String name;
+    private final int sizeInBytes;
 
-    Type(String name) {
+    Type(String name, int sizeInBytes) {
         this.name = name;
+        this.sizeInBytes = sizeInBytes;
+    }
+
+    public int sizeInBytes(int idSize) {
+        if (this == OBJ) {
+            return idSize;
+        } else {
+            return sizeInBytes;
+        }
     }
 
     public static Type hprofTypeToEnum(byte type) {
@@ -55,6 +65,7 @@ public enum Type {
     public String toString() {
         return name;
     }
+
 }
 
 
