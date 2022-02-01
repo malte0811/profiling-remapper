@@ -1,4 +1,4 @@
-package malte0811.profilingremapper.hprof;
+package malte0811.profilingremapper.util;
 
 import java.io.DataOutput;
 import java.io.IOException;

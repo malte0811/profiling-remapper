@@ -25,9 +25,13 @@ import malte0811.profilingremapper.hprof.datastructures.ClassInfo;
 import malte0811.profilingremapper.hprof.datastructures.InstanceField;
 import malte0811.profilingremapper.hprof.datastructures.Static;
 import malte0811.profilingremapper.hprof.datastructures.Type;
+import malte0811.profilingremapper.util.DataRewriter;
 import net.minecraftforge.srgutils.IMappingFile;
 
-import java.io.*;
+import java.io.EOFException;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.function.ToLongFunction;
 
@@ -46,7 +50,7 @@ public class HprofParser {
         this.mappings = mappings;
     }
 
-    public void parse(File file) throws IOException {
+    public void remap(File input, File output) throws IOException {
         /* The file format looks like this:
          *
          * header:
@@ -65,68 +69,43 @@ public class HprofParser {
          *   [u1]* - body
          */
 
-        FileInputStream fs = new FileInputStream(file);
-        DataInputStream in = new DataInputStream(new BufferedInputStream(fs));
         boolean done;
-        int idSize;
 
         System.out.println("Starting first pass");
-        // header
-        String format = readUntilNull(in, DummyDataOutput.INSTANCE);
-        idSize = in.readInt();
-        long startTime = in.readLong();
+        try (var rewriter = new DataRewriter(new FileInputStream(input), null)) {
+            // header
+            rewriter.rereadUntilNull();// format
+            rewriter.setIdSize(rewriter.rereadInt());
+            rewriter.rereadLong(); // start time
 
-        // records
-        do {
-            done = parseRecord(new DataRewriter(idSize, in, DummyDataOutput.INSTANCE), true);
-        } while (!done);
+            // records
+            do {
+                done = parseRecord(rewriter, true);
+            } while (!done);
+        }
         System.out.println("First pass done");
-        in.close();
 
         remap();
 
-        fs = new FileInputStream(file);
-        in = new DataInputStream(new BufferedInputStream(fs));
-        FileOutputStream fo = new FileOutputStream("out.hprof");
-        DataOutputStream out = new DataOutputStream(new BufferedOutputStream(fo));
-        readUntilNull(in, out);
-        out.writeInt(idSize);
-        out.writeLong(startTime);
-        in.readInt();
-        in.readLong();
-        do {
-            done = parseRecord(new DataRewriter(idSize, in, out), false);
-        } while (!done);
-        System.out.println("Second pass done");
-        out.close();
-
-        fs = new FileInputStream("out.hprof");
-        in = new DataInputStream(new BufferedInputStream(fs));
-        readUntilNull(in, DummyDataOutput.INSTANCE);
-        idSize = in.readInt();
-        in.readLong();
-        do {
-            done = parseRecord(new DataRewriter(idSize, in, DummyDataOutput.INSTANCE), true);
-        } while (!done);
-        System.out.println("Parsed output");
-    }
-
-    public static String readUntilNull(DataInput in, DataOutput out) throws IOException {
-
-        int bytesRead = 0;
-        byte[] bytes = new byte[25];
-
-        while ((bytes[bytesRead] = in.readByte()) != 0) {
-            out.write(bytes[bytesRead]);
-            bytesRead++;
-            if (bytesRead >= bytes.length) {
-                byte[] newBytes = new byte[bytesRead + 20];
-                System.arraycopy(bytes, 0, newBytes, 0, bytes.length);
-                bytes = newBytes;
-            }
+        try (var rewriter = new DataRewriter(input, output)) {
+            rewriter.rereadUntilNull();
+            rewriter.setIdSize(rewriter.rereadInt());
+            rewriter.rereadLong();
+            do {
+                done = parseRecord(rewriter, false);
+            } while (!done);
         }
-        out.write(0);
-        return new String(bytes, 0, bytesRead);
+        System.out.println("Second pass done");
+
+        try (var rewriter = new DataRewriter(new FileInputStream(output), null)) {
+            rewriter.rereadUntilNull();
+            rewriter.setIdSize(rewriter.rereadInt());
+            rewriter.rereadLong();
+            do {
+                done = parseRecord(rewriter, true);
+            } while (!done);
+        }
+        System.out.println("Parsed output");
     }
 
     /**

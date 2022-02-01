@@ -32,7 +32,7 @@
 
 package malte0811.profilingremapper;
 
-import malte0811.profilingremapper.hprof.HprofParser;
+import malte0811.profilingremapper.nps.NPSParser;
 import net.minecraftforge.srgutils.IMappingFile;
 
 import java.io.File;
@@ -44,10 +44,11 @@ public class Parse {
 
     public static void main(String[] args) throws Exception {
         var mappings = IMappingFile.load(Path.of(MAPPINGS).toFile());
-        HprofParser parser = new HprofParser(mappings);
+        var parser = new NPSParser(mappings);
 
         try {
-            parser.parse(new File("/media/data/Modding/IE-server-118/general.hprof"));
+            parser.remap(new File("fc-startup.nps"), new File("output.nps"));
+            parser.remap(new File("output.nps"), new File("/dev/null"));
         } catch (IOException e) {
             e.printStackTrace();
         }
