@@ -28,10 +28,7 @@ import malte0811.profilingremapper.hprof.datastructures.Type;
 import malte0811.profilingremapper.util.DataRewriter;
 import net.minecraftforge.srgutils.IMappingFile;
 
-import java.io.EOFException;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.function.ToLongFunction;
 
@@ -72,7 +69,7 @@ public class HprofParser {
         boolean done;
 
         System.out.println("Starting first pass");
-        try (var rewriter = new DataRewriter(new FileInputStream(input), null)) {
+        try (var rewriter = new DataRewriter(new BufferedInputStream(new FileInputStream(input)), null)) {
             // header
             rewriter.rereadUntilNull();// format
             rewriter.setIdSize(rewriter.rereadInt());
@@ -97,7 +94,7 @@ public class HprofParser {
         }
         System.out.println("Second pass done");
 
-        try (var rewriter = new DataRewriter(new FileInputStream(output), null)) {
+        try (var rewriter = new DataRewriter(new BufferedInputStream(new FileInputStream(output)), null)) {
             rewriter.rereadUntilNull();
             rewriter.setIdSize(rewriter.rereadInt());
             rewriter.rereadLong();
@@ -449,6 +446,7 @@ public class HprofParser {
             if (classMappings == null) {
                 continue;
             }
+            strings.put(classNameId, mappings.remapClass(className));
             remapFields(clazz.instanceFields(), InstanceField::fieldNameId, classMappings, className);
             remapFields(clazz.statics(), Static::fieldNameId, classMappings, className);
         }
