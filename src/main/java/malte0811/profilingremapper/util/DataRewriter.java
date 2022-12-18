@@ -23,13 +23,6 @@ public class DataRewriter implements AutoCloseable {
         }
     }
 
-    public DataRewriter(File input, File output) throws IOException {
-        this(
-                new BufferedInputStream(new FileInputStream(input)),
-                new BufferedOutputStream(new FileOutputStream(output))
-        );
-    }
-
     public int idSize() {
         return idSize;
     }
@@ -40,10 +33,6 @@ public class DataRewriter implements AutoCloseable {
 
     public DataOutput out() {
         return out;
-    }
-
-    public OutputStream rawOut() {
-        return innerOut;
     }
 
     public void setIdSize(int idSize) {
@@ -118,35 +107,16 @@ public class DataRewriter implements AutoCloseable {
     public void rereadValue(Type type, int[] bytesReadRef) throws IOException {
         bytesReadRef[0] += type.sizeInBytes(idSize());
         switch (type) {
-            case OBJ -> {
-                long vid = rereadId();
-            }
-            case BOOL -> {
-                boolean vbool = rereadBoolean();
-            }
-            case CHAR -> {
-                char vc = rereadChar();
-            }
-            case FLOAT -> {
-                float vf = rereadFloat();
-            }
-            case DOUBLE -> {
-                double vd = rereadDouble();
-            }
-            case BYTE -> {
-                byte vbyte = rereadByte();
-            }
-            case SHORT -> {
-                short vs = rereadShort();
-            }
-            case INT -> {
-                int vi = rereadInt();
-            }
-            case LONG -> {
-                long vl = rereadLong();
-            }
+            case OBJ -> rereadId();
+            case BOOL -> rereadBoolean();
+            case CHAR -> rereadChar();
+            case FLOAT -> rereadFloat();
+            case DOUBLE -> rereadDouble();
+            case BYTE -> rereadByte();
+            case SHORT -> rereadShort();
+            case INT -> rereadInt();
+            case LONG -> rereadLong();
         }
-        ;
     }
 
     public long readId() throws IOException {
@@ -194,6 +164,7 @@ public class DataRewriter implements AutoCloseable {
     public void close() throws IOException {
         innerIn.close();
         if (innerOut != null) {
+            innerOut.flush();
             innerOut.close();
         }
     }

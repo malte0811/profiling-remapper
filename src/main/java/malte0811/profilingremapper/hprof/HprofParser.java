@@ -70,7 +70,7 @@ public class HprofParser {
         boolean done;
 
         System.out.println("Starting first pass");
-        try (var rewriter = new DataRewriter(new BufferedInputStream(new FileInputStream(input)), null)) {
+        try (var rewriter = new DataRewriter(makeReaderStream(input), null)) {
             // header
             rewriter.rereadUntilNull();// format
             rewriter.setIdSize(rewriter.rereadInt());
@@ -86,7 +86,7 @@ public class HprofParser {
         remap();
         System.out.println("Remapped string indices");
 
-        try (var rewriter = new DataRewriter(input, output)) {
+        try (var rewriter = new DataRewriter(makeReaderStream(input), makeWriterStream(output))) {
             rewriter.rereadUntilNull();
             rewriter.setIdSize(rewriter.rereadInt());
             rewriter.rereadLong();
@@ -96,7 +96,7 @@ public class HprofParser {
         }
         System.out.println("Second pass done");
 
-        try (var rewriter = new DataRewriter(new BufferedInputStream(new FileInputStream(output)), null)) {
+        try (var rewriter = new DataRewriter(makeReaderStream(output), null)) {
             rewriter.rereadUntilNull();
             rewriter.setIdSize(rewriter.rereadInt());
             rewriter.rereadLong();
@@ -105,6 +105,14 @@ public class HprofParser {
             } while (!done);
         }
         System.out.println("Parsed output");
+    }
+
+    private static InputStream makeReaderStream(File in) throws FileNotFoundException {
+        return new BufferedInputStream(new FileInputStream(in), 1024 * 1024);
+    }
+
+    private static OutputStream makeWriterStream(File out) throws FileNotFoundException {
+        return new BufferedOutputStream(new FileOutputStream(out), 1024 * 1024);
     }
 
     /**
