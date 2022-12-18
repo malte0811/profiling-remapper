@@ -17,10 +17,6 @@
 package malte0811.profilingremapper.hprof;
 
 import com.google.common.base.Preconditions;
-import it.unimi.dsi.fastutil.longs.Long2LongMap;
-import it.unimi.dsi.fastutil.longs.Long2LongOpenHashMap;
-import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
-import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import malte0811.profilingremapper.hprof.datastructures.ClassInfo;
 import malte0811.profilingremapper.hprof.datastructures.InstanceField;
 import malte0811.profilingremapper.hprof.datastructures.Static;
@@ -30,6 +26,8 @@ import net.minecraftforge.srgutils.IMappingFile;
 
 import javax.annotation.Nullable;
 import java.io.*;
+import java.util.Map;
+import java.util.HashMap;
 import java.nio.charset.StandardCharsets;
 import java.util.function.ToLongFunction;
 
@@ -39,9 +37,9 @@ import java.util.function.ToLongFunction;
  */
 public class HprofParser {
 
-    private final Long2ObjectMap<ClassInfo> classMap = new Long2ObjectOpenHashMap<>();
-    private final Long2ObjectMap<String> strings = new Long2ObjectOpenHashMap<>();
-    private final Long2LongMap classIdToNameId = new Long2LongOpenHashMap();
+    private final Map<Long, ClassInfo> classMap = new HashMap<>();
+    private final Map<Long, String> strings = new HashMap<>();
+    private final Map<Long, Long> classIdToNameId = new HashMap<>();
     private final IMappingFile mappings;
 
     public HprofParser(IMappingFile mappings) {
