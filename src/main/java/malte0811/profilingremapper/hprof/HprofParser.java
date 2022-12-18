@@ -28,6 +28,7 @@ import malte0811.profilingremapper.hprof.datastructures.Type;
 import malte0811.profilingremapper.util.DataRewriter;
 import net.minecraftforge.srgutils.IMappingFile;
 
+import javax.annotation.Nullable;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.function.ToLongFunction;
@@ -83,6 +84,7 @@ public class HprofParser {
         System.out.println("First pass done");
 
         remap();
+        System.out.println("Remapped string indices");
 
         try (var rewriter = new DataRewriter(input, output)) {
             rewriter.rereadUntilNull();
@@ -436,20 +438,45 @@ public class HprofParser {
 
     private void remap() {
         for (var clazz : classMap.values()) {
-            var classNameId = classIdToNameId.get(clazz.classObjId());
-            var className = strings.get(classNameId);
+            final var classNameId = classIdToNameId.get(clazz.classObjId());
+            final var className = strings.get(classNameId);
             if (className == null) {
                 System.out.println("Failed to find class name for ID " + classNameId);
                 continue;
             }
-            var classMappings = mappings.getClass(className);
+            final var classMappings = mappings.getClass(className);
+            strings.put(classNameId, remapClassName(className, classMappings));
             if (classMappings == null) {
                 continue;
             }
-            strings.put(classNameId, mappings.remapClass(className));
             remapFields(clazz.instanceFields(), InstanceField::fieldNameId, classMappings, className);
             remapFields(clazz.statics(), Static::fieldNameId, classMappings, className);
         }
+    }
+
+    private String remapClassName(String name) {
+        return remapClassName(name, mappings.getClass(name));
+    }
+
+    private String remapClassName(String className, @Nullable IMappingFile.IClass classObject) {
+        if (classObject != null) {
+            return classObject.getMapped();
+        } else if (className.startsWith("[") && className.endsWith(";")) {
+            final var prefixLength = className.indexOf('L') + 1;
+            final var elementName = className.substring(prefixLength, className.length() - 1);
+            final var elementMapped = remapClassName(elementName);
+            return className.substring(0, prefixLength) + elementMapped + ";";
+        }
+        var namePrefix = className;
+        int lastDollar;
+        while ((lastDollar = namePrefix.lastIndexOf('$')) >= 0) {
+            namePrefix = namePrefix.substring(0, lastDollar);
+            final var prefixRemapped = mappings.remapClass(namePrefix);
+            if (prefixRemapped != null) {
+                return prefixRemapped + className.substring(namePrefix.length());
+            }
+        }
+        return className;
     }
 
     private <T> void remapFields(
