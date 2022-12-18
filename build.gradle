@@ -1,5 +1,8 @@
 apply plugin: 'java'
 
+archivesBaseName = 'profiling-remapper'
+version = '1.0'
+
 repositories {
     maven {
         url 'https://maven.minecraftforge.net'
@@ -11,4 +14,15 @@ dependencies {
     implementation 'net.minecraftforge:srgutils:0.4.9'
     implementation 'it.unimi.dsi:fastutil:8.5.6'
     implementation 'com.google.guava:guava:31.0.1-jre'
+}
+
+jar {
+    manifest {
+        attributes(
+                'Main-Class': 'malte0811.profilingremapper.Parse'
+        )
+    }
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
 }
