@@ -51,11 +51,12 @@ public record NPSParser(IMappingFile mappings) {
         reader.rereadBoolean(); // "collectingTwoTimeStamps", whatever that means
         int numMethods = reader.rereadInt();
         for (int i = 0; i < numMethods; ++i) {
-            final var clazz = reader.rereadUTF();
+            var clazz = reader.in().readUTF();
             var methodName = reader.in().readUTF();
             final var methodDesc = reader.in().readUTF();
             var classMappings = mappings.getClass(clazz.replace('.', '/'));
             if (classMappings != null) {
+                clazz = classMappings.getMapped();
                 // Can't use a direct lookup since that would require VVM to actually produce sensible methodDesc's
                 // instead of empty strings
                 for (var method : classMappings.getMethods()) {
@@ -65,6 +66,7 @@ public record NPSParser(IMappingFile mappings) {
                     }
                 }
             }
+            reader.out().writeUTF(clazz);
             reader.out().writeUTF(methodName);
             reader.out().writeUTF(methodDesc);
         }
